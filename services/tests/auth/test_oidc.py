@@ -11,6 +11,11 @@ from terrapod.auth.connectors.oidc import OIDCConnector, _generate_pkce_pair
 from terrapod.config import OIDCProviderConfig
 
 
+class _FakeJwtClaims(dict):
+    def validate(self, leeway: int = 30) -> None:
+        pass
+
+
 class TestGeneratePkcePair:
     def test_challenge_matches_verifier_s256(self):
         verifier, challenge = _generate_pkce_pair()
@@ -91,8 +96,9 @@ class TestOIDCConnectorPkce:
             patch("terrapod.auth.connectors.oidc.authlib_jwt.decode") as mock_decode,
             patch.object(connector, "_fetch_userinfo", new_callable=AsyncMock) as mock_userinfo,
         ):
-            claims = {"sub": "user-1", "email": "user@example.com", "exp": 9999999999}
-            mock_decode.return_value = claims
+            mock_decode.return_value = _FakeJwtClaims(
+                {"sub": "user-1", "email": "user@example.com", "exp": 9999999999}
+            )
             mock_userinfo.return_value = {}
 
             await connector.handle_callback(
