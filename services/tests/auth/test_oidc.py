@@ -2,7 +2,7 @@
 
 import base64
 import hashlib
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -54,9 +54,7 @@ class TestOIDCConnectorPkce:
         params = parse_qs(parsed.query)
         assert params["code_challenge_method"] == ["S256"]
         assert params["code_challenge"] == [
-            base64.urlsafe_b64encode(
-                hashlib.sha256(req.code_verifier.encode("ascii")).digest()
-            )
+            base64.urlsafe_b64encode(hashlib.sha256(req.code_verifier.encode("ascii")).digest())
             .rstrip(b"=")
             .decode("ascii")
         ]
@@ -77,9 +75,8 @@ class TestOIDCConnectorPkce:
             "userinfo_endpoint": "https://idp.example.com/userinfo",
         }
 
-        # Minimal JWT payload whose validation is mocked via jwks + authlib decode.
-        mock_response = AsyncMock()
-        mock_response.raise_for_status = lambda: None
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
             "id_token": "header.payload.sig",
             "access_token": "opaque-access",
@@ -88,10 +85,6 @@ class TestOIDCConnectorPkce:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = False
         mock_client.post.return_value = mock_response
-        mock_client.get.return_value = AsyncMock(
-            raise_for_status=lambda: None,
-            json=lambda: {"email": "user@example.com", "groups": []},
-        )
         mock_client_cls.return_value = mock_client
 
         with (
@@ -110,5 +103,5 @@ class TestOIDCConnectorPkce:
 
         posted = mock_client.post.call_args
         assert posted is not None
-        token_data = posted.kwargs.get("data") or posted[1].get("data")
+        token_data = posted.kwargs["data"]
         assert token_data["code_verifier"] == "upstream-verifier-abc"
