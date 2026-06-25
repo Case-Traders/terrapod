@@ -1,0 +1,51 @@
+# Fast path for Case-Traders fork: build and push terrapod-api only.
+# Full ci.yml still runs on main; this avoids waiting for e2e/release/GPG.
+name: Publish fork API
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-fork-api-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io/case-traders
+
+jobs:
+  build-api:
+    name: Build terrapod-api (amd64)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compute image tags
+        id: meta
+        run: echo "sha_short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: ./.github/actions/ghcr-login
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile.api
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/terrapod-api:sha-${{ steps.meta.outputs.sha_short }}
+            ${{ env.REGISTRY }}/terrapod-api:sha-${{ github.sha }}
+          cache-from: type=gha,scope=terrapod-api-amd64
+          cache-to: type=gha,mode=max,scope=terrapod-api-amd64

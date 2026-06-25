@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: ghcr.io/mattrobinsonsre
+  REGISTRY: ghcr.io/case-traders
 
 jobs:
   # ── Prepare ────────────────────────────────────────────
@@ -878,7 +878,7 @@ jobs:
           # platform to the matrix arch so the arm64 scan resolves its child.
           TRIVY_PLATFORM: linux/${{ matrix.arch }}
         with:
-          image-ref: ghcr.io/mattrobinsonsre/${{ matrix.image }}:sha-${{ needs.prepare.outputs.sha_short }}-${{ matrix.arch }}
+          image-ref: ${{ env.REGISTRY }}/${{ matrix.image }}:sha-${{ needs.prepare.outputs.sha_short }}-${{ matrix.arch }}
           format: sarif
           output: trivy-${{ matrix.image }}-${{ matrix.arch }}.sarif
           severity: HIGH,CRITICAL
